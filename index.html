@@ -1,0 +1,1309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Hexa Stack Sort</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#161433;
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;color:#fff;
+    touch-action:none;user-select:none;-webkit-user-select:none}
+  body{background:radial-gradient(ellipse at 50% 35%,#3a2f7a 0%,#211b4d 55%,#120f2c 100%)}
+  .hidden{display:none !important}
+  canvas{position:fixed;left:0;top:0;display:block;touch-action:none}
+
+  /* HUD */
+  #hud{position:fixed;left:0;right:0;top:0;height:84px;display:flex;flex-direction:column;padding:4px 10px 0;pointer-events:none;z-index:3}
+  .row1{display:flex;align-items:center;justify-content:space-between;gap:8px;height:52px}
+  .stat{display:flex;flex-direction:column;min-width:70px}
+  .stat.right{align-items:flex-end}
+  .stat small,#lvl small{font-size:10px;letter-spacing:.14em;opacity:.65;font-weight:700}
+  .stat b{font-size:22px;line-height:1.05;font-weight:800;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  #lvl{flex:1;max-width:230px;text-align:center}
+  .bar{height:10px;border-radius:6px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffe14d,#ff9f43);border-radius:6px;transition:width .35s}
+  .ibtn{pointer-events:auto;width:38px;height:38px;border-radius:12px;border:0;background:rgba(255,255,255,.12);
+    color:#fff;font-size:17px;cursor:pointer;flex:none}
+  .row2{display:flex;align-items:center;gap:8px;height:28px;margin-top:2px;padding:0 4px;border-radius:14px}
+  .row2.spot{animation:spot 1s infinite;background:rgba(255,225,77,.16)}
+  @keyframes spot{0%,100%{box-shadow:0 0 0 2px rgba(255,225,77,.5)}50%{box-shadow:0 0 0 5px rgba(255,225,77,1)}}
+  .cdot{width:22px;height:22px;border-radius:50%;background:#46407a;border:2px solid rgba(255,255,255,.45);
+    display:grid;place-items:center;font-size:12px;font-weight:900;flex:none}
+  .vial{position:relative;flex:1;height:18px;border-radius:9px;background:rgba(255,255,255,.14);overflow:hidden}
+  .vial i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#1fd8c4,#b57bff,#ff7ac8);transition:width .6s}
+  .vial span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.7);white-space:nowrap}
+  #coins{font-weight:800;font-size:14px;min-width:62px;text-align:right}
+
+  /* power-ups */
+  #powers{position:fixed;left:0;right:0;height:56px;display:flex;justify-content:center;align-items:center;gap:16px;pointer-events:none;z-index:2}
+  .pw{pointer-events:auto;position:relative;width:96px;height:46px;border-radius:23px;border:2px solid rgba(255,255,255,.25);
+    background:linear-gradient(#5b4bd6,#3e31a8);color:#fff;font-weight:800;font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #261e72;transition:transform .12s}
+  .pw:active{transform:translateY(2px)}
+  .pw .ico{font-size:20px}
+  .pw em{font-style:normal;background:#ffe14d;color:#3a2a00;border-radius:12px;min-width:24px;padding:1px 7px;font-size:14px}
+  .pw.zero{opacity:.45;filter:grayscale(.6)}
+  .pw.active{background:linear-gradient(#ff7a59,#e0432a);box-shadow:0 4px 0 #8f2412;border-color:#fff}
+  .pw.pulse{animation:pulse .5s}
+  @keyframes pulse{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
+
+  /* overlays / cards */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,8,30,.66);
+    backdrop-filter:blur(3px);z-index:6;overflow:auto;padding:12px}
+  #over{z-index:5} #menu{z-index:5}
+  .card{width:min(90vw,400px);max-height:96vh;overflow:auto;padding:22px 22px 20px;border-radius:26px;text-align:center;
+    background:linear-gradient(#4a3cc0,#2d2390);border:2px solid rgba(255,255,255,.22);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  .card h1{margin:0 0 6px;font-size:30px;line-height:1.05;font-weight:900;letter-spacing:.01em;
+    background:linear-gradient(90deg,#ffe14d,#ff9f43,#ff5468);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .card h2{margin:8px 0 2px;font-size:24px;font-weight:900}
+  .card h3{margin:14px 0 6px;font-size:13px;letter-spacing:.14em;opacity:.7}
+  .card p{margin:8px 0;font-size:15px;line-height:1.4;opacity:.92}
+  .card p.sm{font-size:12.5px;opacity:.7}
+  .big{font-size:44px;font-weight:900;margin:2px 0 0}
+  .btn{display:block;width:100%;margin:0;padding:13px 20px;font-size:18px;font-weight:900;color:#3a2a00;border:0;border-radius:30px;cursor:pointer;
+    background:linear-gradient(#ffe14d,#ffb23e);box-shadow:0 5px 0 #b9741a;letter-spacing:.03em;font-family:inherit}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b9741a}
+  .btn:disabled{opacity:.45;filter:grayscale(.7);cursor:not-allowed;transform:none;box-shadow:0 5px 0 #7a5a2a}
+  .dbtns{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+  .vidico{display:inline-block;width:26px;height:18px;border-radius:5px;background:#3a2a00;position:relative;vertical-align:-3px;margin-right:8px}
+  .vidico::after{content:"";position:absolute;left:10px;top:4px;border-left:8px solid #ffe14d;border-top:5px solid transparent;border-bottom:5px solid transparent}
+  .link{background:none;border:0;color:#d9ccff;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px;font-family:inherit}
+  .rw{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0 2px}
+  .tile{min-width:78px;padding:10px 8px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
+  .tile .ti{font-size:26px}.tile .tn{font-size:20px;font-weight:900;margin-top:2px}.tile .tl{font-size:11px;opacity:.7;letter-spacing:.08em}
+  .x2{display:inline-block;margin-left:5px;font-size:12px;background:#ffe14d;color:#3a2a00;border-radius:9px;padding:1px 6px;vertical-align:2px}
+  .tip{display:flex;gap:5px;justify-content:center;margin:10px 0 6px;flex-wrap:nowrap}
+  .sw{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:900;border:2px solid rgba(255,255,255,.35);font-size:14px;flex:none}
+  .sw.big{width:84px;height:84px;border-radius:22px;margin:6px auto 0;box-shadow:0 0 30px currentColor}
+  .sw.off{background:#3a346e;color:#8f86d0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .grid2 div{background:rgba(255,255,255,.1);border-radius:14px;padding:8px}
+  .grid2 b{display:block;font-size:20px}.grid2 small{font-size:10.5px;letter-spacing:.1em;opacity:.65}
+  .rec{display:flex;gap:10px;align-items:center;justify-content:space-between;background:rgba(255,255,255,.08);border-radius:10px;padding:6px 12px;margin:4px 0;font-size:15px}
+  .rec b{width:20px;text-align:left;opacity:.7}.rec span{flex:1;text-align:left;font-weight:800}.rec em{font-style:normal;opacity:.7;font-size:13px}
+  #newbest{color:#ffe14d;font-weight:900;letter-spacing:.1em;height:20px;font-size:14px}
+
+  /* tutorial */
+  #tut{position:fixed;left:50%;top:92px;transform:translateX(-50%);width:min(92vw,430px);z-index:4;padding:12px 14px;border-radius:18px;
+    background:rgba(24,16,70,.94);border:2px solid #ffe14d;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:center}
+  #tuttxt{font-size:15.5px;line-height:1.35}
+  #tut .trow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+  #tutNext{width:auto;flex:1;padding:10px 16px;font-size:16px}
+
+  #toast{position:fixed;left:50%;bottom:22%;transform:translateX(-50%);background:rgba(20,12,60,.95);border:1px solid rgba(255,255,255,.3);
+    padding:10px 18px;border-radius:18px;font-weight:700;z-index:8;pointer-events:none;max-width:90vw;text-align:center}
+  #fakead{position:fixed;inset:0;background:#000;color:#fff;z-index:9;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="row1">
+    <div class="stat"><small>SCORE</small><b id="score">0</b></div>
+    <div id="lvl"><small id="lvlt">LEVEL 1</small><div class="bar"><i id="barfill"></i></div></div>
+    <div class="stat right"><small>BEST</small><b id="best">0</b></div>
+    <button class="ibtn" id="lbBtn" aria-label="Leaderboard">🏆</button>
+    <button class="ibtn" id="mute" aria-label="Toggle sound">🔊</button>
+  </div>
+  <div class="row2" id="codex">
+    <span class="cdot" id="cdot">?</span>
+    <div class="vial"><i id="vialfill"></i><span id="vialtxt">Color Vial</span></div>
+    <span id="coins">🪙 0</span>
+  </div>
+</div>
+
+<div id="powers">
+  <button class="pw" id="pwHammer" aria-label="Hammer"><span class="ico">🔨</span><em id="cHammer">1</em></button>
+  <button class="pw" id="pwShuffle" aria-label="Refresh pieces"><span class="ico">🔄</span><em id="cShuffle">1</em></button>
+</div>
+
+<div id="tut" class="hidden">
+  <div id="tuttxt"></div>
+  <div class="trow">
+    <button class="link" id="tutSkip">Skip tutorial</button>
+    <button class="btn hidden" id="tutNext">Start playing</button>
+  </div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>HEXA STACK SORT</h1>
+    <p id="story" style="font-size:14px"></p>
+    <div class="tip" id="swatches"></div>
+    <p class="sm" id="menuInfo"></p>
+    <div class="dbtns">
+      <button class="btn" id="playBtn" disabled>LOADING…</button>
+    </div>
+    <button class="link" id="startOver">Start over</button>
+  </div>
+</div>
+
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <h1>BOARD FULL!</h1>
+    <p style="margin-top:12px">Your score</p>
+    <div class="big" id="finalScore">0</div>
+    <div id="newbest"></div>
+    <p class="sm" id="finalBest">Best: 0</p>
+    <div class="dbtns">
+      <button class="btn" id="againBtn">RETRY LEVEL</button>
+      <button class="btn" id="menuBtn">MENU</button>
+    </div>
+  </div>
+</div>
+
+<div id="dlg" class="overlay hidden"><div class="card" id="dlgcard"></div></div>
+<div id="toast" class="hidden"></div>
+<div id="fakead" class="hidden">Ad playing…</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------ */
+/*  CONFIG                                                             */
+/* ------------------------------------------------------------------ */
+const SQ3 = Math.sqrt(3);
+const YS = 0.8;                  // vertical squash of hexes (pseudo-3D)
+const CLEAR_N = 10;              // same-color blocks on top needed to clear
+const CAP = 18;                  // max blocks per slot
+const TRAY_N = 3;
+const ACTIVE_COUNT = [12, 14, 16, 19, 24, 28, 32, 37];   // active tiles per level (grows with level)
+const SAVE_KEY = 'hexa_save_v2';
+const SIM_ADS = /[?&]simads=1/.test(location.search);    // test-only: simulate ads when the SDK is absent
+const DEBUG = /[?&]debug=1/.test(location.search);
+
+// CrazyGames leaderboard (invite-only feature). Put the 32-byte base64 encryption key from the
+// CrazyGames developer portal here once your game is enabled for leaderboards. Empty = disabled.
+const LB_KEY = '';
+const LB_COOLDOWN = 30;          // seconds between submissions (match the cooldown configured in the portal)
+
+const shade = (hex, f) => {
+  const n = parseInt(hex.slice(1), 16);
+  const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
+  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+};
+// 0-5: base pigments. 6-8: colors you discover through the story.
+const BASE = ['#ff5468', '#ff9f43', '#ffe14d', '#4cd97b', '#4db8ff', '#b57bff', '#1fd8c4', '#ff7ac8', '#e8e2ff'];
+const PAL = BASE.map(c => ({ top: c, l: shade(c, .78), r: shade(c, .6), hi: shade(c, 1.22) }));
+
+/* ---- Story: the Color Alchemist ---- */
+const STORY = 'The world has faded to grey. You are the last Color Alchemist. Sort pigment stacks, merge matching hues and clear them to fill your Color Vial — and discover brand-new colors nobody has ever seen.';
+const STAGES = [
+  { name: 'Aurora Teal', ci: 6, at: 250, lore: 'Born where the sea met the green hills — a color even the ocean had forgotten.' },
+  { name: 'Rose Quartz', ci: 7, at: 700, lore: 'The first blush of dawn, trapped inside a crystal and set free by your hands.' },
+  { name: 'Pearl Light', ci: 8, at: 1400, lore: 'The soft glow hidden in a moonlit shell. The grey world begins to shimmer.' },
+  { name: 'The Prismatic Dawn', ci: -1, at: 2400, lore: 'Every hue you discovered unites into one brilliant light. Color has returned to the world — and you made it happen!' }
+];
+
+/* ------------------------------------------------------------------ */
+/*  HELPERS                                                            */
+/* ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const rnd = n => Math.floor(Math.random() * n);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const shuffleArr = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const topRun = st => {
+  if (!st.length) return 0;
+  const c = st[st.length - 1]; let n = 0;
+  for (let i = st.length - 1; i >= 0 && st[i] === c; i--) n++;
+  return n;
+};
+const topColor = st => st.length ? st[st.length - 1] : -1;
+const goal = L => Math.min(8, 2 + L);                       // stacks to clear per level
+const lockTarget = L => L < 3 ? 0 : Math.min(6, 1 + Math.floor((L - 3) / 2));
+const unlockCost = () => 60 + 10 * level;
+const HAMMER_COST = 70;
+const rewardFor = L => ({ essence: 50 + 15 * L, coins: 30 + 10 * L, hammer: 1, shuffle: L % 2 === 0 ? 1 : 0 });
+
+/* ------------------------------------------------------------------ */
+/*  CRAZYGAMES SDK (the game also runs without it)                      */
+/* ------------------------------------------------------------------ */
+const CG = { sdk: null, adblock: false };
+function loadSDK() {
+  return new Promise(resolve => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; resolve(); } };
+    try {
+      const s = document.createElement('script');
+      s.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
+      s.onload = async () => {
+        try {
+          await window.CrazyGames.SDK.init();
+          CG.sdk = window.CrazyGames.SDK;
+          try { CG.adblock = !!(await CG.sdk.ad.hasAdblock()); } catch (e) {}
+        } catch (e) { /* ignore */ }
+        fin();
+      };
+      s.onerror = fin;
+      document.head.appendChild(s);
+    } catch (e) { fin(); }
+    setTimeout(fin, 3500);
+  });
+}
+let cgPlaying = false, adActive = false;
+const adsOK = () => (!!CG.sdk && !CG.adblock) || (SIM_ADS && !CG.sdk);
+const cg = {
+  start() { if (cgPlaying) return; cgPlaying = true; try { CG.sdk && CG.sdk.game.gameplayStart(); } catch (e) {} },
+  stop() { if (!cgPlaying) return; cgPlaying = false; try { CG.sdk && CG.sdk.game.gameplayStop(); } catch (e) {} },
+  happy() { try { CG.sdk && CG.sdk.game.happytime(); } catch (e) {} },
+  loadStart() { try { CG.sdk && CG.sdk.game.loadingStart(); } catch (e) {} },
+  loadStop() { try { CG.sdk && CG.sdk.game.loadingStop(); } catch (e) {} },
+  adBegin() { adActive = true; adMute(true); },
+  adEnd() { adActive = false; adMute(false); },
+  // Rewarded: resolves true only if the ad was actually watched to the end.
+  rewarded() {
+    if (adActive) return Promise.resolve(false);
+    if (!CG.sdk) {
+      if (!SIM_ADS) return Promise.resolve(false);
+      return new Promise(res => {
+        cg.adBegin(); $('fakead').classList.remove('hidden');
+        setTimeout(() => { $('fakead').classList.add('hidden'); cg.adEnd(); res(true); }, 1500);
+      });
+    }
+    return new Promise(res => {
+      let fin = false;
+      const end = ok => { if (fin) return; fin = true; cg.adEnd(); res(ok); };
+      try {
+        CG.sdk.ad.requestAd('rewarded', {
+          adStarted: () => cg.adBegin(),
+          adFinished: () => end(true),
+          adError: () => end(false)
+        });
+      } catch (e) { end(false); }
+    });
+  },
+  midgame() {
+    if (!CG.sdk || adActive) return Promise.resolve();
+    return new Promise(res => {
+      let fin = false;
+      const end = () => { if (fin) return; fin = true; cg.adEnd(); res(); };
+      try {
+        CG.sdk.ad.requestAd('midgame', { adStarted: () => cg.adBegin(), adFinished: end, adError: end });
+      } catch (e) { end(); }
+    });
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/*  SAVE DATA (CrazyGames data module + localStorage fallback)          */
+/* ------------------------------------------------------------------ */
+const DEF = { v: 2, tut: false, level: 1, score: 0, best: 0, essence: 0, discovered: 0, coins: 0, hammer: 1, shuffle: 1, muted: false, records: [] };
+let save = Object.assign({}, DEF);
+let muted = false;
+let powers = { hammer: 1, shuffle: 1 };
+function readSaveRaw() {
+  let v = null;
+  try { if (CG.sdk && CG.sdk.data) v = CG.sdk.data.getItem(SAVE_KEY); } catch (e) {}
+  if (v == null) { try { v = localStorage.getItem(SAVE_KEY); } catch (e) {} }
+  return v;
+}
+function loadSave() {
+  let o = null;
+  try { const raw = readSaveRaw(); o = raw ? JSON.parse(raw) : null; } catch (e) {}
+  save = Object.assign({}, DEF, o || {});
+  if (!Array.isArray(save.records)) save.records = [];
+  muted = !!save.muted;
+  powers = { hammer: Math.max(1, save.hammer | 0), shuffle: Math.max(1, save.shuffle | 0) };
+}
+let saveTimer = 0;
+function persist() { clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 350); }
+function flushSave() {
+  save.hammer = powers.hammer; save.shuffle = powers.shuffle; save.muted = muted;
+  const s = JSON.stringify(save);
+  try { CG.sdk && CG.sdk.data && CG.sdk.data.setItem(SAVE_KEY, s); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, s); } catch (e) {}
+}
+window.addEventListener('pagehide', flushSave);
+
+/* ------------------------------------------------------------------ */
+/*  LEADERBOARD (CrazyGames: SDK.user.submitScore with AES-GCM score)   */
+/* ------------------------------------------------------------------ */
+async function encryptScore(score, key) {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const keyBytes = Uint8Array.from(atob(key), c => c.charCodeAt(0));
+  const ck = await window.crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']);
+  const data = new TextEncoder().encode(String(score));
+  const enc = new Uint8Array(await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, ck, data));
+  const all = new Uint8Array(iv.length + enc.length);
+  all.set(iv); all.set(enc, iv.length);
+  let bin = ''; all.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+let lbLast = 0, lbTimer = 0, lbPend = 0;
+const lbEnabled = () => !!(LB_KEY && CG.sdk && CG.sdk.user && typeof CG.sdk.user.submitScore === 'function');
+function submitScore(sc) {
+  if (!lbEnabled() || !(sc > 0)) return;
+  lbPend = Math.max(lbPend, sc);
+  clearTimeout(lbTimer);
+  lbTimer = setTimeout(doSubmit, Math.max(0, LB_COOLDOWN * 1000 - (Date.now() - lbLast)));
+}
+async function doSubmit() {
+  const sc = lbPend; if (!sc) return;
+  lbPend = 0; lbLast = Date.now();
+  try { CG.sdk.user.submitScore({ encryptedScore: await encryptScore(sc, LB_KEY), score: sc }); } catch (e) {}
+}
+
+/* ------------------------------------------------------------------ */
+/*  AUDIO (synthesised, no files)                                      */
+/* ------------------------------------------------------------------ */
+let AC = null, master = null, adMuted = false;
+function audioInit() {
+  try {
+    if (!AC) {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain(); master.connect(AC.destination); applyVol();
+    } else if (AC.state === 'suspended' && !adMuted) AC.resume();
+  } catch (e) {}
+}
+function applyVol() { if (master) master.gain.value = (muted || adMuted) ? 0 : 0.6; }
+function adMute(v) { adMuted = v; applyVol(); }
+function tone(f, d, type = 'sine', v = .2, slide = 0, delay = 0) {
+  if (!AC || muted || adMuted) return;
+  try {
+    const t = AC.currentTime + delay;
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .03);
+  } catch (e) {}
+}
+function noise(d, v, freq, delay = 0) {
+  if (!AC || muted || adMuted) return;
+  try {
+    const t = AC.currentTime + delay;
+    const len = Math.floor(AC.sampleRate * d);
+    const buf = AC.createBuffer(1, len, AC.sampleRate), data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = .9;
+    const g = AC.createGain(); g.gain.value = v;
+    src.connect(f); f.connect(g); g.connect(master); src.start(t);
+  } catch (e) {}
+}
+const semi = (base, st) => base * Math.pow(2, st / 12);
+const sfx = {
+  click: () => tone(620, .06, 'triangle', .1, 1.3),
+  pick: () => tone(520, .09, 'triangle', .14, 1.5),
+  place: () => { tone(190, .16, 'sine', .38, .5); tone(380, .06, 'triangle', .1); },
+  merge: k => tone(semi(392, k * 2), .11, 'triangle', .17, 1.25),
+  clear: c => {
+    [0, 4, 7, 12, 16].forEach((st, i) => tone(semi(523, st + (c - 1) * 2), .38, 'sine', .22, 1, i * .055));
+    noise(.35, .22, 2600); tone(110, .3, 'sine', .3, .5);
+  },
+  power: () => [0, 7, 12, 19].forEach((st, i) => tone(semi(660, st), .22, 'triangle', .15, 1, i * .07)),
+  level: () => [0, 4, 7, 12, 16, 19].forEach((st, i) => tone(semi(440, st), .3, 'square', .09, 1, i * .08)),
+  discover: () => [0, 4, 7, 11, 14, 19, 23].forEach((st, i) => tone(semi(392, st), .55, 'sine', .16, 1, i * .1)),
+  unlock: () => { tone(300, .1, 'square', .1, 1.5); tone(600, .25, 'triangle', .16, 1.4, .1); },
+  smash: () => { noise(.3, .4, 900); tone(140, .25, 'sawtooth', .22, .35); },
+  shuffle: () => { tone(400, .18, 'triangle', .15, 2); tone(600, .18, 'triangle', .12, 1.6, .08); },
+  no: () => tone(150, .15, 'square', .1, .7),
+  fail: () => [0, -3, -6, -10].forEach((st, i) => tone(semi(330, st), .4, 'sawtooth', .12, .9, i * .16))
+};
+
+/* ------------------------------------------------------------------ */
+/*  STATE                                                              */
+/* ------------------------------------------------------------------ */
+const cv = $('c'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, S = 40, cx0 = 0, cy0 = 0, trayBaseY = 0, trayGap = 0;
+let now = 0, lastT = 0;
+
+// 37 cells (radius 3). Which are active depends on the level.
+const slots = [];
+for (let r = -3; r <= 3; r++)
+  for (let q = -3; q <= 3; q++)
+    if (Math.abs(q + r) <= 3)
+      slots.push({ q, r, d: Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)), x: 0, y: 0, stack: [], fx: null,
+        drop: -9999, appear: -9999, active: false, locked: false, lockAnim: -9999, nb: [], i: 0 });
+slots.forEach((s, i) => { s.i = i; });
+const DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+slots.forEach(s => DIRS.forEach(([dq, dr]) => {
+  const n = slots.find(o => o.q === s.q + dq && o.r === s.r + dr);
+  if (n) s.nb.push(n.i);
+}));
+const order = slots.slice().sort((a, b) => a.r - b.r || a.q - b.q).map(s => s.i);
+// growth order: ring by ring, spread around the ring so the board stays balanced
+const growOrder = [];
+for (let d = 0; d <= 3; d++) {
+  const ring = slots.filter(s => s.d === d).sort((a, b) => {
+    const ang = s => (Math.atan2(1.5 * s.r, SQ3 * (s.q + s.r / 2)) + Math.PI * 2.5) % (Math.PI * 2);
+    return ang(a) - ang(b);
+  });
+  const stride = d === 2 ? 5 : d === 3 ? 7 : 1;
+  for (let k = 0; k < ring.length; k++) growOrder.push(ring[(k * stride) % ring.length]);
+}
+
+let tray = new Array(TRAY_N).fill(null);
+let score = 0, level = 1, lvlClears = 0, combo = 0, rescues = 0, offered = false;
+let state = 'menu';          // menu | play | over
+let busy = false, modalOpen = false, runId = 0;
+let mode = null;             // null | 'hammer'
+let drag = null;             // {i, x, y, lift, hover}
+let tut = null;              // onboarding state
+let flyers = [], particles = [], texts = [], shake = 0;
+let maxR = 2;
+
+const inputBlocked = () => state !== 'play' || busy || modalOpen || adActive;
+
+/* ------------------------------------------------------------------ */
+/*  LAYOUT                                                             */
+/* ------------------------------------------------------------------ */
+function layout() {
+  W = window.innerWidth; H = window.innerHeight;
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const hudH = 84, pwH = 56;
+  const cnt = slots.filter(s => s.active).length;
+  maxR = cnt > 19 ? 3 : 2;
+  const bh = maxR === 3 ? 10.4 : 8.0;
+  S = Math.max(14, Math.min(W * .94 / ((2 * maxR + 1) * SQ3), (H - hudH - pwH) / (bh + 2.5)));
+  const trayH = S * 2.5;
+  const area = H - hudH - pwH - trayH;
+  cx0 = W / 2; cy0 = hudH + area / 2 + .75 * S;
+  trayBaseY = H - S * .6;
+  trayGap = Math.min(S * 2.2, (W - 24) / 3);
+  slots.forEach(s => {
+    s.x = cx0 + S * SQ3 * (s.q + s.r / 2);
+    s.y = cy0 + S * 1.5 * s.r * YS;
+  });
+  $('powers').style.top = (hudH + area) + 'px';
+}
+window.addEventListener('resize', layout);
+const trayX = i => W / 2 + (i - (TRAY_N - 1) / 2) * trayGap;
+const TRAY_SCALE = .85;
+
+/* ------------------------------------------------------------------ */
+/*  DRAWING                                                            */
+/* ------------------------------------------------------------------ */
+function hexV(x, y, R) {
+  const v = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i - 30);
+    v.push([x + R * Math.cos(a), y + R * Math.sin(a) * YS]);
+  }
+  return v;
+}
+function poly(pts) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath(); ctx.fill();
+}
+const TH = s => s * .14;
+function drawLayer(x, y, s, ci, alpha = 1) {
+  const R = s * .88, th = TH(s), P = PAL[ci], v = hexV(x, y, R);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = P.r;
+  poly([v[1], v[2], [v[2][0], v[2][1] + th], [v[1][0], v[1][1] + th]]);
+  ctx.fillStyle = P.l;
+  poly([v[2], v[3], [v[3][0], v[3][1] + th], [v[2][0], v[2][1] + th]]);
+  ctx.fillStyle = P.top;
+  poly(v);
+  ctx.strokeStyle = P.hi; ctx.lineWidth = Math.max(1, s * .035); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  poly([v[4], v[5], v[0], [x + R * .15, y], [x - R * .35, y - R * .1]]);
+  ctx.globalAlpha = 1;
+}
+function drawStack(x, y, s, stack, alpha = 1, from = 0, extraY = 0) {
+  const th = TH(s);
+  for (let k = 0; k < stack.length; k++) drawLayer(x, y - (from + k + 1) * th + extraY, s, stack[k], alpha);
+}
+function drawBase(x, y, s, hl = 0, glow = 0, dark = false) {
+  const v = hexV(x, y, s * .93);
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  poly(v.map(p => [p[0], p[1] + s * .1]));
+  ctx.fillStyle = dark ? 'rgba(15,8,45,.62)' : hl ? `rgba(255,255,255,${.16 + hl * .14})` : 'rgba(255,255,255,.075)';
+  poly(v);
+  ctx.strokeStyle = glow ? 'rgba(255,225,77,.85)' : dark ? 'rgba(255,210,77,.5)' : 'rgba(255,255,255,.2)';
+  ctx.lineWidth = glow ? 3 : 1.5; ctx.stroke();
+}
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawLock(x, y, s, wob) {
+  const w = s * .5, h = s * .4;
+  ctx.save(); ctx.translate(x, y + s * .02); ctx.rotate(wob);
+  ctx.strokeStyle = '#d7dbe8'; ctx.lineWidth = s * .09; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-w * .27, -h * .2); ctx.lineTo(-w * .27, -h * .55);
+  ctx.arc(0, -h * .55, w * .27, Math.PI, 0); ctx.lineTo(w * .27, -h * .2); ctx.stroke();
+  ctx.fillStyle = '#ffd24d'; rr(-w / 2, -h * .2, w, h, s * .08); ctx.fill();
+  ctx.strokeStyle = '#b8860b'; ctx.lineWidth = s * .03; ctx.stroke();
+  ctx.fillStyle = '#6b4a00'; ctx.beginPath(); ctx.arc(0, h * .02, s * .05, 0, 6.3); ctx.fill();
+  ctx.fillRect(-s * .02, h * .02, s * .04, h * .22);
+  ctx.restore();
+}
+function ring(x, y, s) {
+  const p = .5 + .5 * Math.sin(now / 200);
+  const v = hexV(x, y, s * (1 + .05 * p));
+  ctx.save();
+  ctx.strokeStyle = `rgba(255,225,77,${.65 + .35 * p})`; ctx.lineWidth = 4;
+  ctx.shadowColor = '#ffe14d'; ctx.shadowBlur = 18;
+  ctx.beginPath(); v.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1])); ctx.closePath(); ctx.stroke();
+  ctx.restore();
+}
+function drawText(txt, x, y, size, color, alpha = 1) {
+  ctx.globalAlpha = alpha;
+  ctx.font = `900 ${size}px "Segoe UI",system-ui,sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = size * .2; ctx.strokeStyle = 'rgba(30,10,60,.85)'; ctx.lineJoin = 'round';
+  ctx.strokeText(txt, x, y);
+  ctx.fillStyle = color; ctx.fillText(txt, x, y);
+  ctx.globalAlpha = 1;
+}
+
+function render() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (shake > .3) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+
+  const hover = drag ? drag.hover : -1;
+  // slot bases
+  for (const s of slots) {
+    if (!s.active) continue;
+    const a = clamp((now - s.appear) / 450, 0, 1);
+    if (a <= 0) continue;
+    ctx.globalAlpha = a;
+    if (s.locked) {
+      drawBase(s.x, s.y, S, 0, 0, true);
+    } else {
+      const hammerGlow = mode === 'hammer' && s.stack.length ? 1 : 0;
+      const pulse = hammerGlow ? .5 + .5 * Math.sin(now / 160) : 0;
+      drawBase(s.x, s.y, S, s.i === hover ? 1 : 0, hammerGlow && pulse > .5);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // stacks (row by row) + locks
+  for (const i of order) {
+    const s = slots[i];
+    if (!s.active || now < s.appear) continue;
+    if (s.locked) {
+      const wob = Math.sin((now - s.lockAnim) / 90) * Math.max(0, 1 - (now - s.lockAnim) / 600) * .4;
+      drawLock(s.x, s.y - S * .02, S, wob);
+      continue;
+    }
+    let dy = 0, al = 1;
+    const age = (now - s.drop) / 240;
+    if (age >= 0 && age < 1) { const e = ease(age); dy = -(1 - e) * S * .7; al = .3 + .7 * e; }
+    drawStack(s.x, s.y, S, s.stack, al, 0, dy);
+    if (s.fx) {
+      const e = clamp((now - s.fx.t0) / s.fx.dur, 0, 1);
+      const sc = S * (1 + .22 * Math.sin(e * Math.PI));
+      drawStack(s.x, s.y - e * S * .9, sc, s.fx.colors, 1 - e * e, s.stack.length);
+    }
+    if (s.i === hover && drag) drawStack(s.x, s.y, S, tray[drag.i].stack, .5);
+  }
+  // tray
+  for (let i = 0; i < TRAY_N; i++) {
+    const x = trayX(i), ts = S * TRAY_SCALE;
+    drawBase(x, trayBaseY, ts, 0, 0);
+    const p = tray[i];
+    if (!p || (drag && drag.i === i)) continue;
+    const e = ease((now - p.t0) / 380);
+    drawStack(x, trayBaseY + (1 - e) * S * 2.2, ts, p.stack, e);
+  }
+  // onboarding highlights
+  if (tut && tut.step < 2 && tray[tut.piece]) {
+    const sl = slots[tut.slot], px = trayX(tut.piece), py = trayBaseY;
+    ring(px, py, S * TRAY_SCALE); ring(sl.x, sl.y, S);
+    drawText('▼', sl.x, sl.y - S * 1.5 - Math.abs(Math.sin(now / 220)) * S * .3, S * .5, '#ffe14d');
+    if (!drag) {
+      const t = (now % 2200) / 2200;
+      const k = t < .15 ? 0 : t < .75 ? ease((t - .15) / .6) : 1;
+      const al = t > .88 ? (1 - t) / .12 : 1;
+      const hx = px + (sl.x - px) * k, hy = (py - S * .2) + ((sl.y - S * .2) - (py - S * .2)) * k;
+      ctx.globalAlpha = al; ctx.font = `${S * .95}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+      ctx.fillText('👆', hx + S * .15, hy + S * .55); ctx.globalAlpha = 1;
+    }
+  }
+  // flyers
+  for (const f of flyers) {
+    const t = (now - f.t0) / f.dur;
+    if (t < 0) { drawLayer(f.x0, f.y0, S, f.c); continue; }
+    const e = ease(t), tt = clamp(t, 0, 1);
+    const x = f.x0 + (f.x1 - f.x0) * e;
+    const y = f.y0 + (f.y1 - f.y0) * e - Math.sin(tt * Math.PI) * S * .9;
+    drawLayer(x, y, S, f.c);
+  }
+  // dragged ghost
+  if (drag && tray[drag.i]) {
+    const p = tray[drag.i];
+    const gx = drag.x, gy = drag.y - drag.lift;
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    poly(hexV(gx, gy + S * .12, S * .8));
+    drawStack(gx, gy, S, p.stack, 1);
+  }
+  // particles
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, 1 - p.life / p.max);
+    ctx.fillStyle = p.c;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  // floating texts
+  for (const t of texts) {
+    const e = (now - t.t0) / t.dur;
+    if (e < 0 || e > 1) continue;
+    const pop = e < .15 ? .6 + e / .15 * .5 : 1.1 - Math.min(.1, (e - .15) * .3);
+    drawText(t.txt, t.x, t.y - e * S * 1.2, t.size * pop, t.color, e < .75 ? 1 : 1 - (e - .75) / .25);
+  }
+  if (mode === 'hammer') drawText('Tap a stack to smash it', W / 2, 108, Math.max(15, S * .42), '#ffe14d');
+}
+
+/* ------------------------------------------------------------------ */
+/*  FX                                                                 */
+/* ------------------------------------------------------------------ */
+function burst(x, y, col, n = 30, power = 1) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = (90 + Math.random() * 280) * power;
+    particles.push({
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 140, life: 0, max: .55 + Math.random() * .55,
+      c: Math.random() < .25 ? '#fff' : col, s: 3 + Math.random() * 6, rot: Math.random() * 6, vr: (Math.random() - .5) * 12
+    });
+  }
+}
+function addText(x, y, txt, color = '#fff', size = 26, dur = 900) { texts.push({ x, y, txt, color, size, t0: now, dur }); }
+function updateFx(dt) {
+  for (const p of particles) { p.life += dt; p.vy += 700 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; }
+  particles = particles.filter(p => p.life < p.max);
+  texts = texts.filter(t => now - t.t0 < t.dur);
+  shake *= Math.pow(.001, dt);
+}
+function frame(t) {
+  now = t;
+  const dt = Math.min(.05, (t - lastT) / 1000 || 0.016); lastT = t;
+  updateFx(dt); render();
+  requestAnimationFrame(frame);
+}
+let toastTimer = 0;
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.classList.remove('hidden');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+}
+
+/* ------------------------------------------------------------------ */
+/*  DIALOGS                                                            */
+/* ------------------------------------------------------------------ */
+function ask({ title, body, buttons }) {
+  return new Promise(res => {
+    modalOpen = true; drag = null;
+    const card = $('dlgcard');
+    card.innerHTML = `<h1>${title}</h1><div class="dbody">${body || ''}</div><div class="dbtns"></div>`;
+    const wrap = card.querySelector('.dbtns');
+    buttons.filter(Boolean).forEach(b => {
+      const el = document.createElement('button');
+      el.className = 'btn';
+      el.innerHTML = (b.ad ? '<span class="vidico"></span>' : '') + b.label;
+      if (b.disabled) el.disabled = true;
+      el.addEventListener('click', () => {
+        audioInit(); sfx.click();
+        $('dlg').classList.add('hidden'); modalOpen = false;
+        res(b.id);
+      });
+      wrap.appendChild(el);
+    });
+    $('dlg').classList.remove('hidden');
+  });
+}
+const tile = (ico, n, lab, m) => n ? `<div class="tile"><div class="ti">${ico}</div><div class="tn">+${n * m}${m > 1 ? '<span class="x2">x' + m + '</span>' : ''}</div><div class="tl">${lab}</div></div>` : '';
+const rewardsHtml = (rw, m) => `<div class="rw">${tile('🧪', rw.essence, 'ESSENCE', m)}${tile('🪙', rw.coins, 'COINS', m)}${tile('🔨', rw.hammer, 'HAMMER', m)}${tile('🔄', rw.shuffle, 'REFRESH', m)}</div>`;
+
+/* ------------------------------------------------------------------ */
+/*  PIECES                                                             */
+/* ------------------------------------------------------------------ */
+function colorPool() {
+  const baseN = Math.min(6, 3 + Math.floor((level - 1) / 2));
+  const pool = [];
+  for (let i = 0; i < baseN; i++) pool.push(i);
+  for (let i = 0; i < Math.min(3, save.discovered); i++) pool.push(6 + i);
+  return pool;
+}
+function genPiece() {
+  const pool = colorPool();
+  const segs = 1 + (Math.random() < .55 ? 1 : 0) + (Math.random() < .2 ? 1 : 0);
+  const tops = slots.filter(s => s.active).map(s => topColor(s.stack)).filter(c => c >= 0 && pool.includes(c));
+  const st = []; let last = -1;
+  for (let k = 0; k < segs; k++) {
+    let c, guard = 0;
+    do { c = (tops.length && Math.random() < .5) ? tops[rnd(tops.length)] : pool[rnd(pool.length)]; }
+    while (c === last && pool.length > 1 && guard++ < 20);
+    last = c;
+    const len = Math.min(1 + rnd(4), 7 - st.length);
+    for (let j = 0; j < len; j++) st.push(c);
+  }
+  return st;
+}
+function refillTray() {
+  for (let i = 0; i < TRAY_N; i++) if (!tray[i]) tray[i] = { stack: genPiece(), t0: now + i * 110 };
+  tone(300, .1, 'triangle', .08, 1.4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  RESOLVE ENGINE: merges + clears                                    */
+/* ------------------------------------------------------------------ */
+function findMerge() {
+  let bestM = null;
+  for (const a of slots) {
+    if (!a.active || !a.stack.length) continue;
+    for (const j of a.nb) {
+      if (j < a.i) continue;
+      const b = slots[j];
+      if (!b.active || !b.stack.length || topColor(a.stack) !== topColor(b.stack)) continue;
+      const ra = topRun(a.stack), rb = topRun(b.stack);
+      let src, dst;
+      if (ra < rb) { src = a; dst = b; }
+      else if (ra > rb) { src = b; dst = a; }
+      else if (a.stack.length <= b.stack.length) { src = a; dst = b; }
+      else { src = b; dst = a; }
+      const n = Math.min(topRun(src.stack), CAP - dst.stack.length);
+      if (n <= 0) continue;
+      const sc = ra + rb;
+      if (!bestM || sc > bestM.sc) bestM = { src, dst, n, sc };
+    }
+  }
+  return bestM;
+}
+async function doMove(m, rid) {
+  const { src, dst, n } = m;
+  const color = topColor(src.stack);
+  const srcLen = src.stack.length, dstBase = dst.stack.length;
+  src.stack.splice(srcLen - n, n);
+  const th = TH(S);
+  for (let i = 0; i < n; i++) {
+    flyers.push({ c: color, t0: now + i * 55, dur: 300, x0: src.x, y0: src.y - (srcLen - i) * th,
+      x1: dst.x, y1: dst.y - (dstBase + i + 1) * th, dst });
+    sfx.merge(i);
+  }
+  await wait(300 + (n - 1) * 55 + 30);
+  if (rid !== runId) return;
+  for (let i = 0; i < n; i++) dst.stack.push(color);
+  flyers = flyers.filter(f => f.dst !== dst);
+  dst.drop = -9999;
+  burst(dst.x, dst.y - dst.stack.length * th, PAL[color].top, 6, .5);
+}
+async function doClear(i, rid) {
+  const s = slots[i];
+  const n = topRun(s.stack), color = topColor(s.stack);
+  const removed = s.stack.splice(s.stack.length - n, n);
+  combo++;
+  const pts = n * 10 * combo;
+  score += pts;
+  if (!tut) {
+    lvlClears++;
+    save.essence += 10 * combo; save.coins += 4 * combo;
+    if (combo >= 3) { powers.hammer++; addText(W / 2, cy0 + 3.4 * S, 'COMBO BONUS +1 🔨', '#7dffa6', Math.max(18, S * .5), 1300); sfx.power(); }
+    persist();
+  }
+  s.fx = { colors: removed, t0: now, dur: 560 };
+  const topY = s.y - (s.stack.length + n) * TH(S);
+  burst(s.x, topY, PAL[color].top, 38 + combo * 8, 1 + combo * .15);
+  addText(s.x, topY - S * .4, '+' + pts, '#ffe14d', Math.max(20, S * .6));
+  if (combo > 1) addText(W / 2, cy0 - 3.4 * S, 'COMBO x' + combo + '!', '#ff9f43', Math.max(24, S * .8), 1100);
+  shake = Math.min(14, 5 + combo * 3);
+  sfx.clear(combo);
+  hud();
+  await wait(540);
+  s.fx = null;
+}
+async function resolve(rid) {
+  combo = 0;
+  let guard = 0;
+  while (guard++ < 400 && state === 'play' && rid === runId) {
+    const ci = slots.findIndex(s => s.active && topRun(s.stack) >= CLEAR_N);
+    if (ci >= 0) { await doClear(ci, rid); continue; }
+    const m = findMerge();
+    if (!m) break;
+    await doMove(m, rid);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  HUD                                                                */
+/* ------------------------------------------------------------------ */
+function hud() {
+  const g = goal(level);
+  $('score').textContent = score.toLocaleString();
+  $('best').textContent = Math.max(save.best, score).toLocaleString();
+  $('lvlt').textContent = `LEVEL ${level} · ${Math.min(lvlClears, g)}/${g}`;
+  $('barfill').style.width = (Math.min(1, lvlClears / g) * 100) + '%';
+  const idx = save.discovered;
+  if (idx >= STAGES.length) {
+    $('vialfill').style.width = '100%'; $('vialtxt').textContent = 'All colors restored ✦';
+    $('cdot').textContent = '✦'; $('cdot').style.background = 'linear-gradient(135deg,#ff5468,#ffe14d,#4cd97b,#4db8ff,#b57bff)';
+  } else {
+    const prev = idx ? STAGES[idx - 1].at : 0, span = STAGES[idx].at - prev;
+    const cur = clamp(save.essence - prev, 0, span);
+    $('vialfill').style.width = (cur / span * 100) + '%';
+    $('vialtxt').textContent = `Color Vial · next discovery ${Math.floor(cur)}/${span}`;
+    $('cdot').textContent = '?'; $('cdot').style.background = '';
+  }
+  $('coins').textContent = '🪙 ' + save.coins;
+  $('cHammer').textContent = powers.hammer;
+  $('cShuffle').textContent = powers.shuffle;
+  $('pwHammer').classList.toggle('zero', powers.hammer <= 0);
+  $('pwShuffle').classList.toggle('zero', powers.shuffle <= 0);
+  $('pwHammer').classList.toggle('active', mode === 'hammer');
+  $('mute').textContent = muted ? '🔇' : '🔊';
+}
+function refreshMenu() {
+  $('story').textContent = STORY;
+  const sw = $('swatches'); sw.innerHTML = '';
+  STAGES.slice(0, 3).forEach((st, i) => {
+    const d = document.createElement('div');
+    const got = save.discovered > i;
+    d.className = 'sw' + (got ? '' : ' off'); d.textContent = got ? '' : '?';
+    if (got) d.style.background = BASE[st.ci];
+    d.title = got ? st.name : 'Undiscovered color';
+    sw.appendChild(d);
+  });
+  BASE.slice(0, 6).forEach(c => { const d = document.createElement('div'); d.className = 'sw'; d.style.background = c; sw.appendChild(d); });
+  const cont = save.tut && (save.level > 1 || save.score > 0);
+  $('menuInfo').textContent = save.tut
+    ? `Level ${save.level} · Best ${save.best.toLocaleString()} · ${Math.min(save.discovered, 3)}/3 colors discovered`
+    : 'Tip: drag stacks onto empty tiles. Matching colors merge!';
+  $('playBtn').textContent = cont ? 'CONTINUE' : 'PLAY';
+  $('startOver').classList.toggle('hidden', !(save.level > 1 || save.discovered > 0));
+  $('startOver').textContent = 'Start over';
+}
+
+/* ------------------------------------------------------------------ */
+/*  LEVELS, LOCKS, DISCOVERIES                                         */
+/* ------------------------------------------------------------------ */
+function applyBoard(fresh) {
+  const cnt = ACTIVE_COUNT[Math.min(level - 1, ACTIVE_COUNT.length - 1)];
+  growOrder.forEach((s, i) => {
+    const on = i < cnt;
+    if (on && (!s.active || fresh)) s.appear = now + (fresh ? s.d * 70 : 0);
+    if (!on) { s.stack = []; s.locked = false; }
+    s.active = on;
+  });
+  layout();
+}
+function applyLocks() {
+  const target = lockTarget(level);
+  let cur = slots.filter(s => s.active && s.locked).length;
+  const cand = shuffleArr(slots.filter(s => s.active && !s.locked && !s.stack.length && s.d >= 1));
+  while (cur < target && cand.length) {
+    const s = cand.pop(); s.locked = true; s.lockAnim = now + 200; cur++;
+  }
+}
+async function startLevel(L) {
+  level = L; lvlClears = 0; offered = false;
+  save.level = L; save.score = score; persist();
+  submitScore(score);
+  applyBoard(false); applyLocks(); hud();
+  addText(W / 2, cy0 - 2.8 * S, 'LEVEL ' + L, '#ffffff', Math.max(28, S * 1.05), 1500);
+  const cnt = ACTIVE_COUNT[Math.min(L - 1, ACTIVE_COUNT.length - 1)], prev = ACTIVE_COUNT[Math.min(L - 2, ACTIVE_COUNT.length - 1)];
+  if (cnt > prev) addText(W / 2, cy0 - 2.0 * S, 'The board grew!', '#7dffa6', Math.max(16, S * .5), 1500);
+  if (slots.filter(s => s.locked).length && lockTarget(L) > lockTarget(L - 1)) addText(W / 2, cy0 - 1.4 * S, 'A tile is locked 🔒', '#ffd24d', Math.max(15, S * .45), 1500);
+  await wait(600);
+}
+function grantRewards(rw, m) {
+  save.essence += rw.essence * m; save.coins += rw.coins * m;
+  powers.hammer += rw.hammer * m; powers.shuffle += rw.shuffle * m;
+  persist(); hud(); sfx.power();
+}
+async function levelComplete(rid) {
+  const L = level, rw = rewardFor(L), ok = adsOK();
+  if (ok) offered = true;
+  sfx.level(); cg.happy();
+  burst(W / 2, cy0, '#ffe14d', 60, 1.4);
+  const ch = await ask({
+    title: `LEVEL ${L} COMPLETE!`,
+    body: `<p>You restored more color to the world.</p>${rewardsHtml(rw, 1)}`,
+    buttons: [{ id: 'claim', label: 'Claim' }, ok && { id: 'x2', label: 'Claim x2', ad: true }]
+  });
+  if (rid !== runId) return;
+  let m = 1;
+  if (ch === 'x2') {
+    const watched = await cg.rewarded();
+    if (rid !== runId) return;
+    if (watched) m = 2; else toast('No ad available right now — claimed x1');
+  }
+  grantRewards(rw, m);
+  if (m === 2) {
+    await ask({ title: 'REWARDS DOUBLED!', body: rewardsHtml(rw, 2), buttons: [{ id: 'ok', label: 'Awesome!' }] });
+    if (rid !== runId) return;
+  }
+  await checkDiscovery(rid);
+  if (rid !== runId) return;
+  await startLevel(L + 1);
+}
+async function checkDiscovery(rid) {
+  while (save.discovered < STAGES.length && save.essence >= STAGES[save.discovered].at) {
+    const st = STAGES[save.discovered];
+    save.discovered++;
+    if (st.ci >= 0) { powers.hammer++; powers.shuffle++; }
+    persist(); hud(); cg.happy(); sfx.discover();
+    burst(W / 2, cy0, st.ci >= 0 ? BASE[st.ci] : '#ffe14d', 80, 1.6);
+    const body = st.ci >= 0
+      ? `<div class="sw big" style="background:${BASE[st.ci]};color:${BASE[st.ci]}"></div><h2>${st.name}</h2><p>${st.lore}</p><p class="sm">It now appears in your pigment stacks! Bonus: +1 🔨 +1 🔄</p>`
+      : `<h2>${st.name}</h2><p>${st.lore}</p><p class="sm">Keep playing to push your score up the leaderboard.</p>`;
+    await ask({ title: st.ci >= 0 ? 'NEW COLOR DISCOVERED!' : 'THE WORLD IS COLORFUL AGAIN', body, buttons: [{ id: 'ok', label: 'Continue' }] });
+    if (rid !== runId) return;
+  }
+}
+async function settle(rid) {
+  if (state !== 'play' || rid !== runId) return;
+  if (lvlClears >= goal(level)) { await levelComplete(rid); if (rid !== runId) return; }
+  await checkDiscovery(rid);
+  if (state !== 'play' || rid !== runId) return;
+  if (tray.every(x => !x)) refillTray();
+  await checkOver(rid);
+}
+async function checkOver(rid) {
+  if (state !== 'play' || tut || rid !== runId) return;
+  if (slots.some(s => s.active && !s.locked && !s.stack.length)) return;
+  // Board is full.
+  if (powers.hammer > 0) {
+    addText(W / 2, cy0 - 3.4 * S, 'Board full! Use the hammer', '#ff9f43', Math.max(18, S * .55), 1800);
+    mode = 'hammer'; hud(); return;
+  }
+  if (rescues >= 2) { gameOver(); return; }
+  const ok = adsOK(); if (ok) offered = true;
+  const ch = await ask({
+    title: 'NO SPACE LEFT!',
+    body: '<p>Smash a stack with a hammer to keep going.</p>',
+    buttons: [
+      { id: 'coin', label: `Buy 🔨 · 🪙 ${HAMMER_COST}`, disabled: save.coins < HAMMER_COST },
+      ok && { id: 'ad', label: 'Get a free 🔨', ad: true },
+      { id: 'end', label: 'End run' }
+    ]
+  });
+  if (rid !== runId) return;
+  let got = false;
+  if (ch === 'coin') { save.coins -= HAMMER_COST; got = true; }
+  else if (ch === 'ad') { got = await cg.rewarded(); if (rid !== runId) return; if (!got) toast('No ad available right now'); }
+  if (got) {
+    rescues++; powers.hammer++; mode = 'hammer'; persist(); hud(); sfx.power();
+    addText(W / 2, cy0 - 3.4 * S, '+1 HAMMER 🔨', '#7dffa6', Math.max(20, S * .6), 1400);
+    return;
+  }
+  gameOver();
+}
+async function tryUnlock(i) {
+  const s = slots[i];
+  if (!s || !s.locked || inputBlocked()) return;
+  const cost = unlockCost(), ok = adsOK();
+  if (ok) offered = true;
+  const rid = runId;
+  const ch = await ask({
+    title: 'LOCKED TILE',
+    body: '<p>Unlock this tile to make room for more stacks.</p>',
+    buttons: [
+      { id: 'coin', label: `Unlock · 🪙 ${cost}`, disabled: save.coins < cost },
+      ok && { id: 'ad', label: 'Unlock for free', ad: true },
+      { id: 'no', label: 'Not now' }
+    ]
+  });
+  if (rid !== runId) return;
+  let go = false;
+  if (ch === 'coin') { save.coins -= cost; go = true; }
+  else if (ch === 'ad') { go = await cg.rewarded(); if (rid !== runId) return; if (!go) toast('No ad available right now'); }
+  if (go) {
+    s.locked = false; s.appear = now; persist(); hud(); sfx.unlock();
+    burst(s.x, s.y, '#ffd24d', 24, .8);
+    addText(s.x, s.y - S, 'Tile unlocked!', '#ffd24d', Math.max(16, S * .45), 1200);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  GAME FLOW                                                          */
+/* ------------------------------------------------------------------ */
+function showOverlay(id, on) { $(id).classList.toggle('hidden', !on); }
+function resetBoard() {
+  slots.forEach(s => { s.stack = []; s.fx = null; s.drop = -9999; s.locked = false; });
+  flyers = []; particles = []; texts = []; mode = null; drag = null;
+}
+async function startRun() {
+  const rid = ++runId;
+  tut = null; hideTut();
+  level = save.level; score = save.score; lvlClears = 0; combo = 0; rescues = 0; offered = false;
+  powers = { hammer: Math.max(1, save.hammer | 0), shuffle: Math.max(1, save.shuffle | 0) };
+  resetBoard();
+  state = 'play'; busy = true; modalOpen = false;
+  showOverlay('menu', false); showOverlay('over', false); showOverlay('dlg', false);
+  applyBoard(true); applyLocks();
+  const free = shuffleArr(slots.filter(s => s.active && !s.locked));
+  const n0 = Math.min(3 + level, Math.floor(free.length / 2));
+  for (let k = 0; k < n0; k++) { free[k].stack = genPiece(); free[k].drop = now + k * 60 + 200; }
+  tray = new Array(TRAY_N).fill(null); refillTray();
+  hud(); cg.start();
+  try {
+    await resolve(rid);
+    if (rid !== runId) return;
+    await settle(rid);
+  } finally { if (rid === runId) busy = false; }
+}
+function gameOver() {
+  if (state === 'over') return;
+  state = 'over'; mode = null; drag = null; busy = false;
+  sfx.fail(); shake = 12; cg.stop();
+  const finalScore = score;
+  const isBest = finalScore > save.best;
+  if (isBest) save.best = finalScore;
+  save.records.push({ s: finalScore, l: level, d: Date.now() });
+  save.records.sort((a, b) => b.s - a.s); save.records = save.records.slice(0, 5);
+  persist(); submitScore(finalScore);
+  $('finalScore').textContent = finalScore.toLocaleString();
+  $('finalBest').textContent = 'Best: ' + save.best.toLocaleString() + ' · Level ' + level;
+  $('newbest').textContent = isBest && finalScore > 0 ? '★ NEW BEST ★' : '';
+  $('againBtn').textContent = 'RETRY LEVEL ' + level;
+  hud();
+  const rid = runId;
+  setTimeout(() => { if (state === 'over' && rid === runId) showOverlay('over', true); }, 900);
+}
+async function placePiece(ti, si) {
+  const rid = runId;
+  const p = tray[ti], s = slots[si];
+  busy = true;
+  s.stack = p.stack.slice(); s.drop = now;
+  tray[ti] = null;
+  if (!tut) score += s.stack.length;
+  sfx.place();
+  burst(s.x, s.y - s.stack.length * TH(S), PAL[s.stack[s.stack.length - 1]].top, 8, .4);
+  hud();
+  try {
+    await wait(200);
+    await resolve(rid);
+    if (rid !== runId || state !== 'play') return;
+    if (tut) { tutAfter(); return; }
+    await settle(rid);
+  } finally { if (rid === runId) busy = false; }
+}
+async function useHammer(si) {
+  const rid = runId;
+  const s = slots[si];
+  busy = true; powers.hammer--; mode = null; persist(); hud();
+  const colors = s.stack.slice();
+  s.stack = [];
+  s.fx = { colors, t0: now, dur: 450 };
+  burst(s.x, s.y - colors.length * TH(S) / 2, '#ffffff', 22, .9);
+  colors.forEach((c, k) => burst(s.x, s.y - k * TH(S), PAL[c].top, 3, .7));
+  shake = 9; sfx.smash();
+  try {
+    await wait(460);
+    if (rid !== runId) return;
+    s.fx = null;
+    await resolve(rid);
+    if (rid !== runId) return;
+    await settle(rid);
+  } finally { if (rid === runId) busy = false; }
+}
+
+/* ------------------------------------------------------------------ */
+/*  ONBOARDING (skippable)                                             */
+/* ------------------------------------------------------------------ */
+const slotAtQR = (q, r) => slots.find(s => s.q === q && s.r === r).i;
+function setTut(html) { $('tuttxt').innerHTML = html; }
+function hideTut() {
+  $('tut').classList.add('hidden'); $('codex').classList.remove('spot');
+  $('tutNext').classList.add('hidden'); $('powers').classList.remove('hidden');
+}
+function startTutorial() {
+  const rid = ++runId;
+  level = 1; score = 0; lvlClears = 0; combo = 0; mode = null;
+  resetBoard();
+  state = 'play'; busy = false; modalOpen = false;
+  showOverlay('menu', false); showOverlay('over', false);
+  applyBoard(true);
+  tut = { step: 0, piece: 0, slot: slotAtQR(0, 0), slotB: slotAtQR(1, 0) };
+  tray = [{ stack: [3, 3, 3], t0: now + 300 }, { stack: [4, 3, 3], t0: now + 420 }, null];
+  $('powers').classList.add('hidden');
+  $('tut').classList.remove('hidden'); $('tutNext').classList.add('hidden');
+  setTut('Welcome, Alchemist! <b>Drag the glowing stack</b> from the bottom onto the <b>glowing tile</b>.');
+  hud(); cg.start();
+}
+function tutAfter() {
+  if (!tut) return;
+  if (tut.step === 0) {
+    tut.step = 1; tut.piece = 1; tut.slot = tut.slotB;
+    setTut('Nice! Now drag the <b>second stack</b> onto the tile <b>right next to it</b>.');
+  } else if (tut.step === 1) {
+    tut.step = 2;
+    save.essence += 25; persist(); hud();
+    sfx.power();
+    $('codex').classList.add('spot');
+    setTut('They <b>merged</b>! Clear stacks (10 of one color) to fill the <b>Color Vial</b> up here and discover brand-new colors.');
+    $('tutNext').classList.remove('hidden');
+  }
+}
+function endTutorial() {
+  save.tut = true; persist();
+  tut = null; hideTut();
+  startRun();
+}
+$('tutSkip').addEventListener('click', () => { audioInit(); sfx.click(); endTutorial(); });
+$('tutNext').addEventListener('click', () => { audioInit(); sfx.click(); endTutorial(); });
+
+/* ------------------------------------------------------------------ */
+/*  INPUT                                                              */
+/* ------------------------------------------------------------------ */
+function pos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function slotAt(x, y, useHeight) {
+  let bi = -1, bd = 1e9;
+  for (const s of slots) {
+    if (!s.active || s.locked) continue;
+    const cy = useHeight ? s.y - s.stack.length * TH(S) * .5 : s.y;
+    const dx = x - s.x, dy = (y - cy) / YS;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < S * 1.05 && d < bd) { bd = d; bi = s.i; }
+  }
+  return bi;
+}
+function lockedAt(x, y) {
+  let bi = -1, bd = 1e9;
+  for (const s of slots) {
+    if (!s.active || !s.locked) continue;
+    const dx = x - s.x, dy = (y - s.y) / YS;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < S * 1.0 && d < bd) { bd = d; bi = s.i; }
+  }
+  return bi;
+}
+function hoverEmpty(gx, gy) {
+  let bi = -1, bd = 1e9;
+  for (const s of slots) {
+    if (!s.active || s.locked || s.stack.length) continue;
+    if (tut && s.i !== tut.slot) continue;
+    const dx = gx - s.x, dy = (gy - s.y) / YS;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < S * 1.15 && d < bd) { bd = d; bi = s.i; }
+  }
+  return bi;
+}
+cv.addEventListener('pointerdown', e => {
+  audioInit();
+  if (inputBlocked() || drag || (tut && tut.step >= 2)) return;
+  const { x, y } = pos(e);
+  if (mode === 'hammer') {
+    const i = slotAt(x, y, true);
+    if (i >= 0 && slots[i].stack.length) { useHammer(i); return; }
+    const li = lockedAt(x, y);
+    if (li >= 0) { mode = null; hud(); tryUnlock(li); return; }
+    mode = null; hud(); return;
+  }
+  for (let i = 0; i < TRAY_N; i++) {
+    if (!tray[i]) continue;
+    if (tut && i !== tut.piece) continue;
+    const dx = x - trayX(i), dy = (y - (trayBaseY - S * .5)) / .9;
+    if (Math.sqrt(dx * dx + dy * dy) < S * 1.15) {
+      const lift = e.pointerType === 'mouse' ? S * .45 : S * 1.0;
+      drag = { i, x, y, lift, hover: hoverEmpty(x, y - lift) };
+      try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+      sfx.pick();
+      return;
+    }
+  }
+  if (!tut) { const li = lockedAt(x, y); if (li >= 0) tryUnlock(li); }
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const { x, y } = pos(e);
+  drag.x = x; drag.y = y;
+  const h = hoverEmpty(x, y - drag.lift);
+  if (h !== drag.hover) { drag.hover = h; if (h >= 0) tone(700, .04, 'sine', .05); }
+});
+function endDrag(e, cancel) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  try { cv.releasePointerCapture(e.pointerId); } catch (err) {}
+  if (!cancel && d.hover >= 0 && !inputBlocked() && tray[d.i] && !slots[d.hover].stack.length && !slots[d.hover].locked) placePiece(d.i, d.hover);
+  else sfx.no();
+}
+cv.addEventListener('pointerup', e => endDrag(e, false));
+cv.addEventListener('pointercancel', e => endDrag(e, true));
+cv.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && mode) { mode = null; hud(); } });
+
+$('pwHammer').addEventListener('click', () => {
+  audioInit();
+  if (inputBlocked() || tut) return;
+  if (powers.hammer <= 0) { sfx.no(); return; }
+  mode = mode === 'hammer' ? null : 'hammer'; hud();
+});
+$('pwShuffle').addEventListener('click', () => {
+  audioInit();
+  if (inputBlocked() || tut) return;
+  if (powers.shuffle <= 0 || tray.every(x => !x)) { sfx.no(); return; }
+  powers.shuffle--; mode = null; persist();
+  tray = tray.map((p, i) => p ? { stack: genPiece(), t0: now + i * 90 } : null);
+  sfx.shuffle(); hud();
+});
+$('mute').addEventListener('click', () => { audioInit(); muted = !muted; applyVol(); persist(); hud(); });
+
+async function openLeaderboard() {
+  if (modalOpen || adActive) return;
+  for (;;) {
+    let canAuth = false, signed = null;
+    try { canAuth = !!(CG.sdk && CG.sdk.user && CG.sdk.user.isUserAccountAvailable); if (canAuth) signed = await CG.sdk.user.getUser(); } catch (e) {}
+    const recs = save.records.map((r, i) => `<div class="rec"><b>${i + 1}</b><span>${r.s.toLocaleString()}</span><em>Level ${r.l}</em></div>`).join('')
+      || '<p class="sm">Finish a run to set your first record!</p>';
+    const body = `<div class="grid2"><div><b>${save.best.toLocaleString()}</b><small>BEST SCORE</small></div><div><b>${Math.max(save.level, ...save.records.map(r => r.l), 1)}</b><small>HIGHEST LEVEL</small></div>
+      <div><b>${Math.min(3, save.discovered)}/3</b><small>COLORS FOUND</small></div><div><b>${save.essence.toLocaleString()}</b><small>TOTAL ESSENCE</small></div></div>
+      ${lbEnabled() ? '<p class="sm">Your score is sent to the CrazyGames leaderboard when you level up or finish a run. Check your rank on the game page!</p>' : ''}
+      ${lbEnabled() && canAuth && !signed ? '<p class="sm"><b>Sign in</b> to appear on the leaderboard.</p>' : ''}
+      <h3>YOUR BEST RUNS</h3>${recs}`;
+    const ch = await ask({ title: lbEnabled() ? 'LEADERBOARD' : 'YOUR RECORDS', body, buttons: [lbEnabled() && canAuth && !signed && { id: 'signin', label: 'Sign in' }, { id: 'close', label: 'Close' }] });
+    if (ch === 'signin') { try { await CG.sdk.user.showAuthPrompt(); } catch (e) {} continue; }
+    break;
+  }
+}
+$('lbBtn').addEventListener('click', () => { audioInit(); sfx.click(); openLeaderboard(); });
+
+$('playBtn').addEventListener('click', () => {
+  audioInit(); sfx.click();
+  if (!save.tut) startTutorial(); else startRun();
+});
+$('againBtn').addEventListener('click', async () => {
+  audioInit(); sfx.click();
+  showOverlay('over', false);
+  // Never combine a midgame ad with a rewarded offer from the same break.
+  if (!offered) { state = 'over'; await cg.midgame(); }
+  startRun();
+});
+$('menuBtn').addEventListener('click', () => {
+  audioInit(); sfx.click();
+  showOverlay('over', false); state = 'menu'; refreshMenu(); showOverlay('menu', true);
+});
+let confirmReset = false;
+$('startOver').addEventListener('click', () => {
+  audioInit(); sfx.click();
+  if (!confirmReset) { confirmReset = true; $('startOver').textContent = 'Tap again to erase progress'; setTimeout(() => { confirmReset = false; refreshMenu(); }, 3500); return; }
+  confirmReset = false;
+  const keep = { tut: true, best: save.best, records: save.records, muted };
+  save = Object.assign({}, DEF, keep); powers = { hammer: 1, shuffle: 1 };
+  level = 1; score = 0; lvlClears = 0; persist(); hud(); refreshMenu();
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && AC) AC.suspend(); else if (AC && !adMuted) AC.resume(); });
+
+/* ------------------------------------------------------------------ */
+/*  BOOT                                                               */
+/* ------------------------------------------------------------------ */
+loadSave();
+level = save.level; score = save.score;
+applyBoard(true);       // draws the board behind the menu
+layout(); hud(); refreshMenu();
+cg.loadStart();
+requestAnimationFrame(frame);
+loadSDK().then(() => {
+  if (state === 'menu') { loadSave(); level = save.level; score = save.score; hud(); refreshMenu(); }
+  cg.loadStop();
+  $('playBtn').disabled = false; refreshMenu();
+});
+if (DEBUG) window.__dbg = c => eval(c);
+})();
+</script>
+</body>
+</html>
